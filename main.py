@@ -7,6 +7,7 @@ from langgraph.graph import START,END,StateGraph
 from langchain_core.messages import HumanMessage,SystemMessage,BaseMessage
 from langchain_groq import ChatGroq
 from typing import Annotated,TypedDict,List,Sequence
+# from langgraph.messages improt messages
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 import operator
@@ -41,22 +42,34 @@ graph.add_edge("chat",END)
 checkpointer = SqliteSaver(conn)
 config = {"configurable": {"thread_id": "1"}} # here the thread_id can be dynamic 
 
-workflow = graph.compile(checkpointer=checkpointer)
-while True :
-    message = input("User: ")
-    if message.lower() in ("break","exit","done"):
-        break
-    initial_state = {
-        "messages": [HumanMessage(message)]
-    }
-    # print(initial_state)
-    # response = workflow.invoke(initial_state,config) # to identify the thread
-    for chunk in workflow.stream(
-        initial_state, config, stream_mode="messages", version="v2"
-    ):
-        if chunk["type"] == "messages":
-            msg_chunk, metadata = chunk["data"]
-            # Print each token as it arrives
-            if msg_chunk.content:
-                print(msg_chunk.content, end="", flush=True) 
-    print() # normal 
+def create_workflow():
+    workflow = graph.compile(checkpointer=checkpointer)
+    return workflow
+
+# workflow = graph.compile(checkpointer=checkpointer)
+
+# while True :
+#     message = input("User: ")
+#     if message.lower() in ("break","exit","done"):
+#         break
+#     initial_state = {
+#         "messages": [HumanMessage(message)]
+#     }
+#     # print(initial_state)
+#     # response = workflow.invoke(initial_state,config) # to identify the thread
+#     for chunk in workflow.stream(
+#         initial_state, config, stream_mode="messages", version="v2"
+#     ):
+#         if chunk["type"] == "messages":
+#             msg_chunk, metadata = chunk["data"]
+#             # Print each token as it arrives
+#             if msg_chunk.content:
+#                 print(msg_chunk.content, end="", flush=True) 
+#     print() # normal 
+
+def retrieve_all_threads():
+    all_threads = set()
+    for checkpoint in checkpointer.list(None):
+        all_threads.add(checkpoint.config['configurable']['thread_id'])
+
+    return list(all_threads)
