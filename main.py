@@ -6,7 +6,7 @@ from langchain_mistralai import ChatMistralAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_community.tools import DuckDuckGoSearchRun
+# from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool, BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from dotenv import load_dotenv
@@ -14,6 +14,8 @@ import aiosqlite
 import requests
 import asyncio
 import threading
+import os 
+from rich import print 
 
 load_dotenv()
 
@@ -64,24 +66,32 @@ client = MultiServerMCPClient(
             "command": "python",
             "args": [r"D:\chatBot\chatbot-mcp-server\arth-main.py"],
         },
-        "expense": {
-            "transport": "sse",  # if this fails, try "sse"
-            "url": "https://splendid-gold-dingo.fastmcp.app/mcp"
+        "github": {
+            "transport": "streamable_http",  # Uses HTTP / SSE transport for online server
+            "url": "https://api.githubcopilot.com/mcp/",
+            "headers": {
+                # Load from your environment variables or paste your ghp_ / github_pat_ token here
+                "Authorization": f"Bearer {os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN')}"
+            }
         }
     }
 )
 
-
 def load_mcp_tools() -> list[BaseTool]:
     try:
-        return run_async(client.get_tools())
-    except Exception:
+        tools = run_async(client.get_tools())
+        # print("Loaded tools:", tools)
+        return tools
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print("Error:", e)
         return []
 
 
 mcp_tools = load_mcp_tools()
-
-tools = [search_tool, get_stock_price, *mcp_tools]
+# print(mcp_tools)
+tools = [get_stock_price, *mcp_tools]
 llm_with_tools = llm.bind_tools(tools) if tools else llm
 
 # -------------------
